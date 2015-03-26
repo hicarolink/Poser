@@ -1,8 +1,6 @@
 package main;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -13,6 +11,8 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FilenameFilter;
@@ -49,11 +49,11 @@ public class Frame extends JFrame {
 	 */
 	private static final long serialVersionUID = 1L;
 	// Jpanels
-	JPanel panel, bottomPanel, upperPanel, extraOptions, previewPanel;
+	JPanel panel, bottomPanel, upperPanel, extraOptions;
 
 	// Images
 	BufferedImage image;
-	Image photo, photoPreview;
+	Image photo;
 
 	// Jbuttons
 	JButton btnOpenFile = new JButton("Add dir");
@@ -68,7 +68,7 @@ public class Frame extends JFrame {
 	// Jcheckboxes
 	JCheckBox randomImg = new JCheckBox("Random");
 	JCheckBox grayscale = new JCheckBox("Grayscale");
-	JCheckBox preview = new JCheckBox("Preview");
+	JCheckBox upsidedown = new JCheckBox("Upside down");
 
 	// Jradiobuttons
 	JRadioButton sec30, sec60, sec90, min2, min5, min10;
@@ -118,7 +118,7 @@ public class Frame extends JFrame {
 				System.out.println("componentResized");
 				if (photo != null) {
 					ImageDimensions(getWidth(), getHeight(), image.getWidth(),
-							image.getHeight(), false);
+							image.getHeight());
 					panel.repaint();
 				}
 			}
@@ -130,21 +130,21 @@ public class Frame extends JFrame {
 
 		randomImg.setSelected(false);
 		grayscale.setSelected(false);
-		preview.setSelected(false);
-
-		preview.addItemListener(new ItemListener() {
-
-			@Override
-			public void itemStateChanged(ItemEvent arg0) {
-				// TODO Auto-generated method stub
-				showSelectedImage(listImages.getSelectedIndex());
-			}
-		});
+		upsidedown.setSelected(false);
 
 		grayscale.addItemListener(new ItemListener() {
 
 			@Override
 			public void itemStateChanged(ItemEvent e) {
+				// TODO Auto-generated method stub
+				panel.repaint();
+			}
+		});
+
+		upsidedown.addItemListener(new ItemListener() {
+
+			@Override
+			public void itemStateChanged(ItemEvent arg0) {
 				// TODO Auto-generated method stub
 				panel.repaint();
 			}
@@ -176,9 +176,9 @@ public class Frame extends JFrame {
 		upperPanel.add(min10);
 
 		extraOptions = new JPanel(new FlowLayout(FlowLayout.CENTER));
-		extraOptions.add(preview);
 		extraOptions.add(randomImg);
 		extraOptions.add(grayscale);
+		extraOptions.add(upsidedown);
 
 		panel = new JPanel() {
 			/**
@@ -190,18 +190,33 @@ public class Frame extends JFrame {
 				super.paintComponent(g);
 
 				if (photo != null) {
-					if (grayscale.isSelected()) {
+					if (upsidedown.isSelected() || grayscale.isSelected()) {
 						BufferedImage img = toBufferedImage(photo);
+						if(upsidedown.isSelected()) {
+							// Reverse the image
+							AffineTransform tx = AffineTransform.getScaleInstance(
+									1, -1);
+							tx.translate(0, -photo.getHeight(null));
+							AffineTransformOp op = new AffineTransformOp(tx,
+									AffineTransformOp.TYPE_NEAREST_NEIGHBOR);
+							img = op.filter(img, null);
+						}
 
-						BufferedImage gray;
-						gray = new BufferedImage(img.getWidth(),
-								img.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+						if (grayscale.isSelected()) {
 
-						Graphics g2 = gray.getGraphics();
-						g2.drawImage(img, 0, 0, null);
-						g2.dispose();
+							BufferedImage gray;
+							gray = new BufferedImage(img.getWidth(),
+									img.getHeight(),
+									BufferedImage.TYPE_BYTE_GRAY);
 
-						g.drawImage(gray, 0, 0, null);
+							Graphics g2 = gray.getGraphics();
+							g2.drawImage(img, 0, 0, null);
+							g2.dispose();
+
+							img = gray;
+						}
+						
+						g.drawImage(img, 0, 0, null);
 					} else {
 						g.drawImage(photo, 0, 0, null);
 					}
@@ -260,25 +275,6 @@ public class Frame extends JFrame {
 				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
 				JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED),
 				BorderLayout.CENTER);
-		previewPanel = new JPanel() {
-			private static final long serialVersionUID = 1L;
-
-			protected void paintComponent(Graphics g) {
-				super.paintComponent(g);
-
-				if (photoPreview != null) {
-					g.drawImage(photoPreview, 0, 0, null);
-				} else {
-					g.setColor(previewPanel.getBackground());
-					g.fillRect(0, 0, previewPanel.getWidth(),
-							previewPanel.getHeight());
-				}
-			}
-		};
-		previewPanel.setBackground(Color.WHITE);
-		previewPanel.setPreferredSize(new Dimension(
-				controlPanel.getWidth() / 4, controlPanel.getHeight() / 4));
-		p2.add(previewPanel, BorderLayout.SOUTH);
 		controlPanel.add(p2, BorderLayout.CENTER);
 		controlPanel.setVisible(true);
 
@@ -404,9 +400,7 @@ public class Frame extends JFrame {
 					}
 
 					photo = null;
-					photoPreview = null;
 					panel.repaint();
-					previewPanel.repaint();
 				}
 			}
 		});
@@ -468,14 +462,12 @@ public class Frame extends JFrame {
 				images_names = new ArrayList<String>();
 				model.clear();
 				photo = null;
-				photoPreview = null;
 				btnClear.setEnabled(false);
 				btnPlay.setEnabled(false);
 				btnRemove.setEnabled(false);
 				btnNext.setEnabled(false);
 
 				panel.repaint();
-				previewPanel.repaint();
 			}
 		});
 
@@ -489,17 +481,24 @@ public class Frame extends JFrame {
 		});
 
 		btnClear.setEnabled(false);
-		
+
 		btnNext.addActionListener(new ActionListener() {
-			
+
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				// TODO Auto-generated method stub
+				timerScreen.purge();
+				timerScreen.cancel();
+
+				timerScreen = new Timer();
 				timeScreen = timePoser;
+				updateLabelScreen(timeScreen);
 				showImage();
+
+				timerScreen.schedule(new timeUpdate(), 0, 1000);
 			}
 		});
-		
+
 		btnNext.setEnabled(false);
 	}
 
@@ -560,7 +559,7 @@ public class Frame extends JFrame {
 				btnPlay.setEnabled(true);
 				btnRemove.setEnabled(true);
 				btnClear.setEnabled(true);
-				
+
 				activateRadiobuttons();
 			}
 		} else {
@@ -586,8 +585,7 @@ public class Frame extends JFrame {
 		min10.setEnabled(true);
 	}
 
-	public void ImageDimensions(int wFrame, int hFrame, int wImage, int hImage,
-			boolean preview) {
+	public void ImageDimensions(int wFrame, int hFrame, int wImage, int hImage) {
 		double ratio, ratiopanel;
 		if (wImage > hImage) {
 			if (wImage > wFrame) {
@@ -619,12 +617,7 @@ public class Frame extends JFrame {
 			hImage = hFrame;
 		}
 
-		if (preview == false) {
-			photo = image.getScaledInstance(wImage, hImage, Image.SCALE_SMOOTH);
-		} else {
-			photoPreview = image.getScaledInstance(wImage, hImage,
-					Image.SCALE_SMOOTH);
-		}
+		photo = image.getScaledInstance(wImage, hImage, Image.SCALE_SMOOTH);
 	}
 
 	public static BufferedImage toBufferedImage(Image img) {
@@ -653,19 +646,19 @@ public class Frame extends JFrame {
 					Random generator = new Random();
 
 					int i = generator.nextInt(images_names.size());
-					
+
 					listImages.setSelectedIndex(i);
 					listImages.ensureIndexIsVisible(i);
-					
+
 					image = ImageIO.read(new File(images_names.get(i)));
 				} else {
 					if (indexDisplay >= images_names.size()) {
 						indexDisplay = 0;
 					}
-					
+
 					listImages.setSelectedIndex(indexDisplay);
 					listImages.ensureIndexIsVisible(indexDisplay);
-					
+
 					image = ImageIO.read(new File(images_names
 							.get(indexDisplay)));
 
@@ -681,14 +674,14 @@ public class Frame extends JFrame {
 			}
 
 			ImageDimensions(getWidth(), getHeight(), image.getWidth(),
-					image.getHeight(), false);
+					image.getHeight());
 			System.out.println(image.getHeight());
 
 			panel.repaint();
 
 		} catch (Exception e) {
 			// TODO: handle exception
-			System.out.println("PROBLEM..."+e.getMessage());
+			System.out.println("PROBLEM..." + e.getMessage());
 		}
 	}
 
@@ -700,16 +693,8 @@ public class Frame extends JFrame {
 				timeScreen = timePoser;
 
 				ImageDimensions(getWidth(), getHeight(), image.getWidth(),
-						image.getHeight(), false);
-				if (preview.isSelected()) {
-					ImageDimensions(previewPanel.getWidth(),
-							previewPanel.getHeight(), image.getWidth(),
-							image.getHeight(), true);
-				} else {
-					photoPreview = null;
-				}
+						image.getHeight());
 
-				previewPanel.repaint();
 				panel.repaint();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
