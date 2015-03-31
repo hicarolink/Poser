@@ -9,5 +9,6 @@ public class Constants {
 	public static int MIN_2 = 120;
 	public static int MIN_5 = 300;
 	public static int MIN_10 = 600;
+	public static int MIN_25 = 1500;
 	
 }

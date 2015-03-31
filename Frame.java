@@ -71,7 +71,7 @@ public class Frame extends JFrame {
 	JCheckBox upsidedown = new JCheckBox("Upside down");
 
 	// Jradiobuttons
-	JRadioButton sec30, sec60, sec90, min2, min5, min10;
+	JRadioButton sec30, sec60, sec90, min2, min5, min10, min25, unlimited;
 
 	final DefaultListModel model = new DefaultListModel();
 	JList listImages = new JList(model);
@@ -89,7 +89,7 @@ public class Frame extends JFrame {
 	Timer timerScreen;
 
 	static final List<String> EXTENSIONS = Arrays.asList("gif", "png", "bmp",
-			"jpg");
+			"jpg", "tif");
 
 	static final FilenameFilter IMAGE_FILTER = new FilenameFilter() {
 
@@ -167,13 +167,14 @@ public class Frame extends JFrame {
 
 		upperPanel = new JPanel();
 		upperPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
-		upperPanel.add(new JLabel("Time"));
+		upperPanel.add(unlimited);
 		upperPanel.add(sec30);
 		upperPanel.add(sec60);
 		upperPanel.add(sec90);
 		upperPanel.add(min2);
 		upperPanel.add(min5);
 		upperPanel.add(min10);
+		upperPanel.add(min25);
 
 		extraOptions = new JPanel(new FlowLayout(FlowLayout.CENTER));
 		extraOptions.add(randomImg);
@@ -192,10 +193,10 @@ public class Frame extends JFrame {
 				if (photo != null) {
 					if (upsidedown.isSelected() || grayscale.isSelected()) {
 						BufferedImage img = toBufferedImage(photo);
-						if(upsidedown.isSelected()) {
+						if (upsidedown.isSelected()) {
 							// Reverse the image
-							AffineTransform tx = AffineTransform.getScaleInstance(
-									1, -1);
+							AffineTransform tx = AffineTransform
+									.getScaleInstance(1, -1);
 							tx.translate(0, -photo.getHeight(null));
 							AffineTransformOp op = new AffineTransformOp(tx,
 									AffineTransformOp.TYPE_NEAREST_NEIGHBOR);
@@ -215,7 +216,7 @@ public class Frame extends JFrame {
 
 							img = gray;
 						}
-						
+
 						g.drawImage(img, 0, 0, null);
 					} else {
 						g.drawImage(photo, 0, 0, null);
@@ -256,19 +257,12 @@ public class Frame extends JFrame {
 			@Override
 			public void valueChanged(ListSelectionEvent arg0) {
 				// TODO Auto-generated method stub
-				if (listImages.getSelectedIndex() == -1) {
-					// No selection, disable fire button.
-				} else {
-					// Selection, enable the fire button.
-					// JOptionPane.showMessageDialog(null,
-					// listImages.getSelectedIndex());
+				if (listImages.getSelectedIndex() != -1) {
 					showSelectedImage(listImages.getSelectedIndex());
 					indexDisplay = listImages.getSelectedIndex();
 				}
 			}
 		});
-		// listImages.setLayoutOrientation(JList.VERTICAL_WRAP);
-		// listImages.setVisibleRowCount(-1);
 
 		JPanel p2 = new JPanel(new BorderLayout());
 		p2.add(new JScrollPane(listImages,
@@ -342,6 +336,26 @@ public class Frame extends JFrame {
 			}
 		});
 
+		min25 = new JRadioButton("25 min");
+		min25.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				timePoser = Constants.MIN_25;
+			}
+		});
+
+		unlimited = new JRadioButton("Unlimited");
+		unlimited.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				timePoser = 0;
+			}
+		});
+
 		ButtonGroup group = new ButtonGroup();
 		group.add(sec30);
 		group.add(sec60);
@@ -349,6 +363,8 @@ public class Frame extends JFrame {
 		group.add(min2);
 		group.add(min5);
 		group.add(min10);
+		group.add(min25);
+		group.add(unlimited);
 	}
 
 	public void initButtons() {
@@ -369,12 +385,23 @@ public class Frame extends JFrame {
 					btnExit.setEnabled(false);
 					btnNext.setEnabled(true);
 
-					timerScreen = new Timer();
+					if (unlimited.isSelected()) {
+						updateLabelScreen("Unlimited");
+					} else {
+						timerScreen = new Timer();
+						timeScreen = timePoser;
+						updateLabelScreen(""+timeScreen);
+
+						timerScreen.schedule(new timeUpdate(), 0, 1000);
+					}
+					showImage();
+					
+					/*timerScreen = new Timer();
 					timeScreen = timePoser;
-					updateLabelScreen(timeScreen);
+					updateLabelScreen(""+timeScreen);
 					showImage();
 
-					timerScreen.schedule(new timeUpdate(), 0, 1000);
+					timerScreen.schedule(new timeUpdate(), 0, 1000);*/
 				} else {
 					JOptionPane.showMessageDialog(null,
 							"There are no loaded images.");
@@ -414,10 +441,12 @@ public class Frame extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				// TODO Auto-generated method stub
-				timerScreen.purge();
-				timerScreen.cancel();
+				if(unlimited.isSelected() == false) {
+					timerScreen.purge();
+					timerScreen.cancel();
+				}
 
-				updateLabelScreen(0);
+				updateLabelScreen(""+0);
 
 				btnStop.setEnabled(false);
 				btnOpenFile.setEnabled(true);
@@ -487,22 +516,26 @@ public class Frame extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				// TODO Auto-generated method stub
-				timerScreen.purge();
-				timerScreen.cancel();
+				if (unlimited.isSelected()) {
+					updateLabelScreen("Unlimited");
+				} else {
+					timerScreen.purge();
+					timerScreen.cancel();
 
-				timerScreen = new Timer();
-				timeScreen = timePoser;
-				updateLabelScreen(timeScreen);
+					timerScreen = new Timer();
+					timeScreen = timePoser;
+					updateLabelScreen(""+timeScreen);
+
+					timerScreen.schedule(new timeUpdate(), 0, 1000);
+				}
 				showImage();
-
-				timerScreen.schedule(new timeUpdate(), 0, 1000);
 			}
 		});
 
 		btnNext.setEnabled(false);
 	}
 
-	public void updateLabelScreen(int time) {
+	public void updateLabelScreen(String time) {
 		labelTime.setText("" + time);
 		System.out.println(time);
 	}
@@ -574,6 +607,7 @@ public class Frame extends JFrame {
 		min2.setEnabled(false);
 		min5.setEnabled(false);
 		min10.setEnabled(false);
+		min25.setEnabled(false);
 	}
 
 	public void activateRadiobuttons() {
@@ -583,6 +617,7 @@ public class Frame extends JFrame {
 		min2.setEnabled(true);
 		min5.setEnabled(true);
 		min10.setEnabled(true);
+		min25.setEnabled(true);
 	}
 
 	public void ImageDimensions(int wFrame, int hFrame, int wImage, int hImage) {
@@ -670,7 +705,7 @@ public class Frame extends JFrame {
 				timerScreen.purge();
 				timerScreen.cancel();
 
-				updateLabelScreen(0);
+				updateLabelScreen(""+0);
 			}
 
 			ImageDimensions(getWidth(), getHeight(), image.getWidth(),
@@ -714,7 +749,7 @@ public class Frame extends JFrame {
 				showImage();
 				timeScreen = timePoser;
 			}
-			updateLabelScreen(timeScreen);
+			updateLabelScreen(""+timeScreen);
 		}
 
 	}
