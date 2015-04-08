@@ -89,7 +89,7 @@ public class Frame extends JFrame {
 	Timer timerScreen;
 
 	static final List<String> EXTENSIONS = Arrays.asList("gif", "png", "bmp",
-			"jpg", "tif");
+			"jpg", "tif", "jpeg");
 
 	static final FilenameFilter IMAGE_FILTER = new FilenameFilter() {
 
@@ -97,8 +97,11 @@ public class Frame extends JFrame {
 		public boolean accept(File dir, String name) {
 			// TODO Auto-generated method stub
 			for (final String ext : EXTENSIONS) {
-				if (name.endsWith("." + ext)) {
+				if (name.toLowerCase().endsWith("." + ext)) {
+					System.out.println("here...ELSE" +name);
 					return true;
+				} else {
+					System.out.println("here...ELSE" +name);
 				}
 			}
 			return false;
@@ -573,7 +576,7 @@ public class Frame extends JFrame {
 				String ext = "";
 				int i = fileImg.getName().lastIndexOf('.');
 				if (i > 0) {
-					ext = fileImg.getName().substring(i + 1);
+					ext = fileImg.getName().toLowerCase().substring(i + 1);
 				}
 				boolean contains = EXTENSIONS.contains(ext);
 				if (contains == true) {
